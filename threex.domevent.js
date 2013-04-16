@@ -1,3 +1,4 @@
+
 // This THREEx helper makes it easy to handle the mouse events in your 3D scene
 //
 // * CHANGES NEEDED
@@ -14,6 +15,10 @@
 // First you include it in your page
 //
 // ```<script src='threex.domevent.js'></script>```
+//
+// # Define the camera, replacing CAMERA_VAR with your camera variable
+//
+// ```THREE.Object3D._threexDomEvent.camera(CAMERA_VAR);```
 //
 // # use the object oriented api
 //
@@ -65,7 +70,7 @@
 //
 
 /** @namespace */
-var THREEx		= THREEx 		|| {};
+var THREEx		= THREEx		|| {};
 
 // # Constructor
 THREEx.DomEvent	= function(camera, domElement)
@@ -118,6 +123,12 @@ THREEx.DomEvent.eventNames	= [
 	"mousedown",
 	"mouseup"
 ];
+
+THREEx.DomEvent.noConflict	= function(){
+	THREEx.DomEvent.noConflict.symbols.forEach(function(symbol){
+		THREE.Object3D.prototype[symbol]	= THREEx.DomEvent.noConflict.previous[symbol];
+	});
+}
 
 /********************************************************************************/
 /*		domevent context						*/
@@ -182,7 +193,7 @@ THREEx.DomEvent.prototype.unbind	= function(object3d, eventName, callback)
 		var handler	= handlers[i];
 		if( callback != handler.callback )	continue;
 		if( useCapture != handler.useCapture )	continue;
-		handlers.splice(i, 1)
+		handlers.splice(i, 1);
 		break;
 	}
 	// from this object from this._boundObjs
@@ -209,7 +220,7 @@ THREEx.DomEvent.prototype._onMove	= function(mouseX, mouseY, origDomEvent)
 	var vector	= new THREE.Vector3( mouseX, mouseY, 1 );
 	this._projector.unprojectVector( vector, this._camera );
 
-	var ray		= new THREE.Ray( this._camera.position, vector.subSelf( this._camera.position ).normalize() );
+	var ray		= new THREE.Raycaster( this._camera.position, vector.sub( this._camera.position ).normalize() );
 	var intersects = ray.intersectObjects( this._boundObjs );
 	
 	var oldSelected	= this._selected;
@@ -250,8 +261,8 @@ THREEx.DomEvent.prototype._onEvent	= function(eventName, mouseX, mouseY, origDom
 	var vector	= new THREE.Vector3( mouseX, mouseY, 1 );
 	this._projector.unprojectVector( vector, this._camera );
 
-	vector.subSelf( this._camera.position ).normalize()
-	var ray		= new THREE.Ray( this._camera.position, vector );
+	vector.sub( this._camera.position ).normalize();
+	var ray		= new THREE.Raycaster( this._camera.position, vector );
 	var intersects	= ray.intersectObjects( this._boundObjs );
 
 	// if there are no intersections, return now
@@ -364,3 +375,32 @@ THREEx.DomEvent.prototype._onTouchEvent	= function(eventName, domEvent)
 	return this._onEvent(eventName, mouseX, mouseY, domEvent);	
 }
 
+/********************************************************************************/
+// # Patch THREE.Object3D -- To enable events on 3D objects when using newer versions of ThreeJS
+/********************************************************************************/
+
+// Backup previous values to restore them later if needed.
+THREEx.DomEvent.noConflict.symbols	= ['on', 'off', 'addEventListener', 'removeEventListener'];
+THREEx.DomEvent.noConflict.previous	= {};
+THREEx.DomEvent.noConflict.symbols.forEach(function(symbol){
+	THREEx.DomEvent.noConflict.previous[symbol]	= THREE.Object3D.prototype[symbol];
+});
+
+// begin the actual patching of THREE.Object3D
+
+// create the global instance of THREEx.DomEvent
+THREE.Object3D._threexDomEvent	= new THREEx.DomEvent();
+
+// # wrap mouseevents.bind()
+THREE.Object3D.prototype.on	=
+THREE.Object3D.prototype.addEventListener = function(eventName, callback){
+	THREE.Object3D._threexDomEvent.bind(this, eventName, callback);
+	return this;
+}
+
+// # wrap mouseevents.unbind()
+THREE.Object3D.prototype.off	=
+THREE.Object3D.prototype.removeEventListener	= function(eventName, callback){
+	THREE.Object3D._threexDomEvent.unbind(this, eventName, callback);
+	return this;
+}

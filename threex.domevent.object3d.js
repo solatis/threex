@@ -33,3 +33,11 @@ THREE.Object3D.prototype.removeEventListener	= function(eventName, callback){
 	THREE.Object3D._threexDomEvent.unbind(this, eventName, callback);
 	return this;
 }
+
+
+THREE.Object3D.prototype.mouseover = function (callback) { this.on("mouseover", callback); }
+THREE.Object3D.prototype.mouseout  = function (callback) { this.on("mouseout", callback); }
+THREE.Object3D.prototype.mouseup   = function (callback) { this.on("mouseup", callback); }
+THREE.Object3D.prototype.mousedown = function (callback) { this.on("mousedown", callback); }
+THREE.Object3D.prototype.click     = function (callback) { this.on("click", callback); }
+THREE.Object3D.prototype.dblclick  = function (callback) { this.on("dblclick", callback); }
